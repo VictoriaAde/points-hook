@@ -1,66 +1,39 @@
-## Foundry
+# BUILDING YOUR FIRST HOOK 
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+A really simple "point" hook"
 
-Foundry consists of:
+Assunme you have some ETH/TOKEN pool t exists We wanna ke a hook that can be attached to such kind of poos where >:
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+every time somebody swaps ETH for TOKEN (i.e. spends ETH, purchases TOKEN) - we issue them some "points"
 
-## Documentation
+This is just a PoC
 
-https://book.getfoundry.sh/
+## Design 
 
-## Usage
+1. How many points do we give out per swap?
 
-### Build
+we're going to give 20% of the ETH spent in the swap in the form of points
+e.g. if someone sells 1 ETH to purchase TOKEN, they get 20% of 1 = 20% of 1 = 0.2 POINTS
 
-```shell
-$ forge build
-```
 
-### Test
+2. How do we represent these points? 
 
-```shell
-$ forge test
-```
+points themselves are going to be an ERC - 1155 token
 
-### Format
+ERC 1155 allows minting of "x" number of tokens that are distinct based on some sort of "key"
+since the hook can be attached to multiple pools, ETH/A, ETH/B, ETH/C
+points = minting some amount of ERC 1155 tokens for that pool to the user
 
-```shell
-$ forge fmt
-```
+> Q: Why not use ERC- 6909 for doing this
+> A: You totally can! ERC-1155 is just a bit more familiar to people so for the first workshop i wanted to stick with this
 
-### Gas Snapshots
+### beforeSwap and afterSwap
 
-```shell
-$ forge snapshot
-```
+this balancedelta thing is actually quite a burden to us because we're giving out points as a % of the amount of ETH that was spent in the swap 
 
-### Anvil
+How much ETH was spent in the swap?
 
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+this is not a question that can be answered beforeSwap because it is literally unknown until the swap happens
+That's because:
+1. slippage limit may hit causing a parial swap to happen
+2. they are basically two types of swaps  that Uniswap can perform - exact-input and exact-output

@@ -4,3 +4,9 @@ out = "out"
 libs = ["lib"]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+
+## Univ4 uses transient storage [EIP 1153]
+It only exists on EVM chains that have the "cancun" EVM hard fork or "pectra" version and above
+
+evm_version = "cancun" 
+solc_version = "0.8.26"
