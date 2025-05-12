@@ -23,7 +23,7 @@ contract PointsHook is BaseHook, ERC1155 {
             beforeRemoveLiquidity: false,
             afterRemoveLiquidity: false,
             beforeSwap: false,
-            afterSwap: false,
+            afterSwap: true,
             beforeDonate: false,
             afterDonate: false,
             beforeSwapReturnDelta: false,
