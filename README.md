@@ -51,3 +51,88 @@ the "BalanceDelta" thing we have in the `afterSwap` becomes  very crucial to our
 Because `BalanceDelta` => the exact amount of tokens that needs to be transferred (how much ETH was spent, how much TOKEN to withdraw)
 
 Tl;DR: we gotta use `afterSwap` because we do not know how much ETH Alice spent before the swap happens 
+
+
+### minting points
+
+maybe we can use 'tx.origin', is that true?
+
+if Alice is using an account abstracted wallet (SC wallet)
+
+'tx.origin' = address of the relayer
+
+GENERAL PURPOSE: 'tx.origin' doesnt work either
+
+how tf do we figure out who to mint points to
+
+we're gonna ask the user to give us an address to mint points to (optionally)
+
+if they dont specify an address/invalid address = dont mint any points
+
+#### hookData
+
+hookData allows users to pass in arbitrary information meant for use by the hook contract
+
+Alice -> Router.swap(...., hookData) -> PoolManager.swap(...., hookData) -> HookContract.before..(..., hookData)
+
+the hook contract can figure out what it wants to do with that hookData
+
+in our case, we're gonna use this as a way to ask the user for an address
+
+to illustrate the concept a bit better, a couple examples of better ways to use hookData
+
+e.g. KYC hook for example
+verify a ZK Proof that somebody is actually a verified human (World App ZK Proof)
+hook only lets you swap/become an LP if youre a human
+
+ZK Proof => hookData
+
+ZK Proof => hookData
+
+#### BalanceDelta
+
+effectively, for all intents and purposes, you can think of BalanceDelta as a struct with two values
+
+```
+struct BalanceDelta {
+    int128 amount0;
+    int128 amount1;
+}
+```
+
+for a given operation (e.g. a swap) the related `BalanceDelta` contains amounts of token0 and token1 that need to be moved around
+
+`amount0` => amount of token0
+`amount1` => amount of token1
+
+NOTE: these amounts are `int`s and NOT `uint`s
+i.e. these can be negative numbers
+
+in fact, in case of a swap, one of them will always be a negative number
+
+there's a convention that's followed in uniswap
+
+where everytime we talk about "money changing hands", we represent money coming in to uniswap and money going out of uniswap based on the sign of the numeric value
+
+this "direction" of a token transfer is represented from the perspective of the caller to uniswap
+
++ve number => money is coming in to user's wallet (i.e. money is leaving Uniswap)
+-ve number => money is leaving user's wallet (i.e. money is entering Uniswap)
+
+in the case of a Swap where youre exchanging one token for another
+
+imagine ETH/USDC pool, selling ETH for USDC, ETH is token0, USDC is token1
+
+```
+BalanceDelta {
+    amount0 = some negative number (amount of ETH being swapped),
+    amount1 = some positive number (amount of USDC being swapped)
+}
+```
+
+in the case of Adding Liquidity to a pool,
+
+(under the asumption you are adding both tokens as liquidity)
+
+amount0 = -ve
+amount1 = -ve
