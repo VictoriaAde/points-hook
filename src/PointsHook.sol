@@ -41,51 +41,55 @@ contract PointsHook is BaseHook, ERC1155 {
         return "";
     }
 
-    funtion _afterSwap(address, PoolKey calldata, SwapParams calldata, BalanceDelta, bytes calldata) internal override returns (bytes4, int128) {
-         /*     
-        1. make sure we're operating in a ETH/TOKEN pool of some sort i.e. ETH is one of the tokens
+  function _afterSwap(
+        address,
+        PoolKey calldata key,
+        SwapParams calldata swapParams,
+        BalanceDelta delta,
+        bytes calldata hookData
+    ) internal override returns (bytes4, int128) {
+        // If this is not an ETH-TOKEN pool with this hook attached, ignore
+        if (!key.currency0.isAddressZero()) return (this.afterSwap.selector, 0);
 
-        2. make sure the swap is for ETH → TOKEN, not the other way around
+        // We only mint points if user is buying TOKEN with ETH
+        if (!swapParams.zeroForOne) return (this.afterSwap.selector, 0);
 
+        // Mint points equal to 20% of the amount of ETH they spent
+        // Since its a zeroForOne swap:
+        // if amountSpecified < 0:
+        //      this is an "exact input for output" swap
+        //      amount of ETH they spent is equal to |amountSpecified|
+        // if amountSpecified > 0:
+        //      this is an "exact output for input" swap
+        //      amount of ETH they spent is equal to BalanceDelta.amount0()
 
-        3. calculate amount of points to give out
+        uint256 ethSpendAmount = uint256(int256(-delta.amount0()));
+        uint256 pointsForSwap = ethSpendAmount / 5;
 
+        // Mint the points
+        _assignPoints(key.toId(), hookData, pointsForSwap);
 
-
-
-        4. mint points
-
-
-        */
-        
-        // byte4 returns value of every hook function = the function selector itself
-        // second returns value in this case = smth to do with return delta hooks 
-        returns (this.afterSwap.selector, 0);
+        return (this.afterSwap.selector, 0);
     }
 
-    function _assignPoints(
+
+   function _assignPoints(
         PoolId poolId,
-        byte calldata hookData,
-        uint points,
-        ) internal {
-            // if user didn't provide a hookData, no points will be minted (return early)
-            if hookData.length == 0 {
-                return;
-            }
+        bytes calldata hookData,
+        uint256 points
+    ) internal {
+        // If no hookData is passed in, no points will be assigned to anyone
+        if (hookData.length == 0) return;
 
-            // try to extract a user address from hookData
-            address user = abi.decode(hookData, (address));
+        // Extract user address from hookData
+        address user = abi.decode(hookData, (address));
 
-            // if user address is not valid, return early
-            if (user == address(0)) {
-                return;
-            }
+        // If there is hookData but not in the format we're expecting and user address is zero
+        // nobody gets any points
+        if (user == address(0)) return;
 
-            // mint ERC1155 tokens 
-            // poolId = keccak256(poolKey)
-            // bytes32 can be type casted into a uint256
-            uint poolIdAsUint = uint256(PoolId.unwrap(poolId));
-            _mint(user, poolIdAsUint, points, ""); // mint points to user
-
+        // Mint points to the user
+        uint256 poolIdUint = uint256(PoolId.unwrap(poolId));
+        _mint(user, poolIdUint, points, "");
     }
 }
